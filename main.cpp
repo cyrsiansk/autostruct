@@ -1,5 +1,7 @@
 #include "server.h"
 #include "client.h"
+#include "endpoint.h"
+#include "common.h"
 #include <thread>
 #include <chrono>
 #include <atomic>
@@ -18,14 +20,16 @@ int main() {
     std::thread server_thread([&server_running] {
         try {
             SockerAutoStructServer server;
-            server.bind<int, SimpleTest>(
+
+            server.add_endpoint(std::make_shared<Endpoint<int, SimpleTest>>(
                 "/base/<int>/send",
                 [](int type, const SimpleTest& data) {
                     std::cout << "📨 Received: type=" << type
                               << ", retries=" << data.retries
                               << ", proxy=" << data.proxy.url << std::endl;
                 }
-            );
+            ));
+
             server.start("0.0.0.0", 5000);
         } catch (const std::exception& e) {
             std::cerr << "❌ Server error: " << e.what() << std::endl;
@@ -47,7 +51,7 @@ int main() {
                 std::cerr << "❌ Failed" << std::endl;
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds(10));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 
