@@ -25,6 +25,7 @@ add_executable(sockobjserver
         main.cpp
         server.cpp
         client.cpp
+        router.h
 )
 
 # Подключение зависимостей

@@ -20,8 +20,8 @@ int main() {
             SockerAutoStructServer server;
             server.bind<int, SimpleTest>(
                 "/base/<int>/send",
-                [](int type, const SimpleTest &data) {
-                    std::cout << "📨 Received request: type=" << type
+                [](int type, const SimpleTest& data) {
+                    std::cout << "📨 Received: type=" << type
                               << ", retries=" << data.retries
                               << ", proxy=" << data.proxy.url << std::endl;
                 }
@@ -40,23 +40,15 @@ int main() {
         int counter = 0;
 
         while (server_running) {
-            SimpleTest test{
-                ++counter,
-                {"https", "proxy.example.com", "user" + std::to_string(counter), "pass"}
-            };
-
-            if (client.post<int, SimpleTest>("/base/<int>/send", 42, test)) {
-                std::cout << "✅ Request sent successfully (retries=" << test.retries << ")" << std::endl;
+            SimpleTest test{++counter, {"https", "proxy.example.com", "user" + std::to_string(counter), "pass"}};
+            if (client.post("/base/<int>/send", 42, test)) {
+                std::cout << "✅ Sent (retries=" << test.retries << ")" << std::endl;
             } else {
-                std::cerr << "❌ Failed to send request" << std::endl;
+                std::cerr << "❌ Failed" << std::endl;
             }
 
             std::this_thread::sleep_for(std::chrono::seconds(10));
         }
-    }
-
-    if (server_thread.joinable()) {
-        server_thread.join();
     }
 
     return 0;

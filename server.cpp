@@ -1,6 +1,6 @@
 #include "server.h"
 
-void SockerAutoStructServer::start(const std::string& host, const int port) {
+void SockerAutoStructServer::start(const std::string& host, int port) {
     std::cout << "🚀 Server starting at " << host << ":" << port << std::endl;
     if (!svr.bind_to_port(host, port)) {
         throw std::runtime_error("Failed to bind server port");
