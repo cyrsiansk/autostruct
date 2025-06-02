@@ -19,5 +19,4 @@ bool SockerAutoStructClient::post(const std::string& route, const TParam& param,
     }
 }
 
-// Явная инстанциация
 template bool SockerAutoStructClient::post<int, SimpleTest>(const std::string&, const int&, const SimpleTest&);

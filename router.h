@@ -3,7 +3,6 @@
 #include <httplib.h>
 #include <regex>
 #include <functional>
-#include <unordered_map>
 
 class RouteHandlerBase {
 public:
