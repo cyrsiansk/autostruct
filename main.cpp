@@ -42,7 +42,8 @@ int main() {
         int counter = 0;
 
         while (counter < 5) {
-            SimpleTest test{++counter, {"https", "proxy.example.com", "user" + std::to_string(counter), "pass"}};
+            Proxy proxy{"socks5", "127.0.0.1:1080", "user", "pass"};
+            SimpleTest test{counter++, proxy};
             if (client.post("/base/<int>/send", 42, test)) {
                 std::cout << "✅ Sent (retries=" << test.retries << ")" << std::endl;
             } else {

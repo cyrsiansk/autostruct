@@ -2,7 +2,7 @@
 #include <string>
 #include <functional>
 #include <nlohmann/json.hpp>
-#include "common.h"
+#include "utils.h"
 
 class IRouteHandler {
 public:
@@ -21,7 +21,7 @@ public:
     bool handle(const std::string& param_str, const std::string& body) override {
         try {
             TParam param = convert_param<TParam>(param_str);
-            TData data = nlohmann::json::parse(body).get<TData>();
+            TData data = nlohmann::json::parse(body);
             cb(param, data);
             return true;
         } catch (...) {
@@ -29,3 +29,4 @@ public:
         }
     }
 };
+

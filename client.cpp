@@ -7,10 +7,7 @@ SockerAutoStructClient::SockerAutoStructClient(const std::string& host, int port
 
 template <typename TParam, typename TData>
 bool SockerAutoStructClient::post(const std::string& route, const TParam& param, const TData& data) {
-    std::string path = route;
-    std::regex re("<\\w+>");
-    path = std::regex_replace(path, re, std::to_string(param));
-
+    std::string path = std::regex_replace(route, std::regex("<\\w+>"), std::to_string(param));
     try {
         nlohmann::json j = data;
         auto res = cli.Post(path.c_str(), j.dump(), "application/json");
@@ -19,5 +16,6 @@ bool SockerAutoStructClient::post(const std::string& route, const TParam& param,
         return false;
     }
 }
+
 
 template bool SockerAutoStructClient::post<int, SimpleTest>(const std::string&, const int&, const SimpleTest&);

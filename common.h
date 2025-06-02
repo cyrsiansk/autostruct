@@ -1,74 +1,59 @@
 #pragma once
 #include <nlohmann/json.hpp>
 #include <string>
-#include <stdexcept>
+#include "serializable.h"
 
 using json = nlohmann::json;
 
-struct Proxy {
+struct Proxy : Serializable<Proxy> {
     std::string protocol;
     std::string url;
     std::string login;
     std::string password;
+
+    Proxy(const std::string& protocol_,
+          const std::string& url_,
+          const std::string& login_,
+          const std::string& password_)
+        : protocol(protocol_), url(url_), login(login_), password(password_) {}
+
+    Proxy() = default;
+
+    void to_json(json& j) const {
+        j = json{
+                {"protocol", protocol},
+                {"url", url},
+                {"login", login},
+                {"password", password}
+        };
+    }
+
+    void from_json(const json& j) {
+        j.at("protocol").get_to(protocol);
+        j.at("url").get_to(url);
+        j.at("login").get_to(login);
+        j.at("password").get_to(password);
+    }
 };
 
-struct SimpleTest {
+struct SimpleTest : Serializable<SimpleTest> {
     int retries;
     Proxy proxy;
+
+    SimpleTest(int retries_, const Proxy& proxy_)
+        : retries(retries_), proxy(proxy_) {}
+
+    SimpleTest() = default;
+
+    void to_json(json& j) const {
+        j = json{
+                {"retries", retries},
+                {"proxy", proxy}
+        };
+    }
+
+    void from_json(const json& j) {
+        j.at("retries").get_to(retries);
+        j.at("proxy").get_to(proxy);
+    }
 };
-
-template <typename T>
-T convert_param(const std::string& str);
-
-template <>
-inline int convert_param<int>(const std::string& str) {
-    try {
-        return std::stoi(str);
-    } catch (...) {
-        throw std::runtime_error("Failed to convert param to int");
-    }
-}
-
-template <>
-inline float convert_param<float>(const std::string& str) {
-    try {
-        return std::stof(str);
-    } catch (...) {
-        throw std::runtime_error("Failed to convert param to float");
-    }
-}
-
-template <>
-inline std::string convert_param<std::string>(const std::string& str) {
-    return str;
-}
-
-namespace nlohmann {
-    inline void to_json(json& j, const Proxy& p) {
-        j = json{
-                {"protocol", p.protocol},
-                {"url", p.url},
-                {"login", p.login},
-                {"password", p.password}
-        };
-    }
-
-    inline void from_json(const json& j, Proxy& p) {
-        j.at("protocol").get_to(p.protocol);
-        j.at("url").get_to(p.url);
-        j.at("login").get_to(p.login);
-        j.at("password").get_to(p.password);
-    }
-
-    inline void to_json(json& j, const SimpleTest& s) {
-        j = json{
-                {"retries", s.retries},
-                {"proxy", s.proxy}
-        };
-    }
-
-    inline void from_json(const json& j, SimpleTest& s) {
-        j.at("retries").get_to(s.retries);
-        j.at("proxy").get_to(s.proxy);
-    }
-}
