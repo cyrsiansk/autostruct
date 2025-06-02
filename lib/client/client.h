@@ -18,7 +18,12 @@ public:
 
     template <typename TParam, typename TData>
     bool post(const std::string& route, const TParam& param, const TData& data) {
-        std::string path = std::regex_replace(route, std::regex("<\\w+>"), std::to_string(param));
+        std::ostringstream oss;
+        oss << param;
+        std::string paramStr = oss.str();
+
+        std::string path = std::regex_replace(route, std::regex("<\\w+>"), paramStr);
+
         try {
             nlohmann::json j = data;
             auto res = cli.Post(path.c_str(), j.dump(), "application/json");
@@ -27,4 +32,5 @@ public:
             return false;
         }
     }
+
 };
