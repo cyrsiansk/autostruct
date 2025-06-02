@@ -1,17 +1,18 @@
 #include "client.h"
 
-SockerAutoStructClient::SockerAutoStructClient(const std::string& host, const int port)
+SockerAutoStructClient::SockerAutoStructClient(const std::string& host, int port)
     : host(host), port(port), cli(host, port) {
     cli.set_connection_timeout(5);
 }
 
 template <typename TParam, typename TData>
 bool SockerAutoStructClient::post(const std::string& route, const TParam& param, const TData& data) {
+    std::string path = route;
     std::regex re("<\\w+>");
-    std::string path = std::regex_replace(route, re, std::to_string(param));
+    path = std::regex_replace(path, re, std::to_string(param));
 
     try {
-        json j = data;
+        nlohmann::json j = data;
         auto res = cli.Post(path.c_str(), j.dump(), "application/json");
         return res && res->status == 200;
     } catch (...) {
