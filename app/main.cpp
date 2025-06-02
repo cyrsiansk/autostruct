@@ -1,6 +1,6 @@
-#include "server.h"
-#include "client.h"
-#include "common.h"
+#include <server.h>
+#include <client.h>
+#include "models/simple_test.h"
 #include <thread>
 #include <chrono>
 #include <atomic>
@@ -19,18 +19,14 @@ int main() {
     std::thread server_thread([&server_running] {
         try {
             SocketAutoStructServer server;
-
-            server.add_handler<int, SimpleTest>(
-                "/base/<int>/send",
-                [](int type, const SimpleTest& data) {
-                    std::cout << "📧 Received: type=" << type
-                              << ", retries=" << data.retries
-                              << ", proxy=" << data.proxy.url << std::endl;
-                });
-
+            server.add_handler<int, SimpleTest>("/base/<int>/send", [](int type, const SimpleTest& data) {
+                std::cout << "📧 Received: type=" << type
+                          << ", retries=" << data.retries
+                          << ", proxy=" << data.proxy.url << std::endl;
+            });
             server.start("0.0.0.0", 5000);
         } catch (const std::exception& e) {
-            std::cerr << "❌ Server error: " << e.what() << std::endl;
+            std::cerr << "⛔ Server error: " << e.what() << std::endl;
             server_running = false;
         }
     });
@@ -40,7 +36,6 @@ int main() {
     if (server_running) {
         SocketAutoStructClient client("localhost", 5000);
         int counter = 0;
-
         while (counter < 5) {
             Proxy proxy{"socks5", "127.0.0.1:1080", "user", "pass"};
             SimpleTest test{counter++, proxy};
@@ -49,7 +44,6 @@ int main() {
             } else {
                 std::cerr << "❌ Failed to send" << std::endl;
             }
-
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
 

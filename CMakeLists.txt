@@ -17,35 +17,50 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(httplib)
 
-add_executable(sockobjserver
-        main.cpp
-        server.cpp
-        client.cpp
-        router.h
-        iroute_handler.h
-        endpoint.h
-        endpoint_registry.h
-        serializable.h
-        utils.h
+set(SOCKOBJ_LIB_SRC
+        lib/client/client.cpp
+        lib/server/server.cpp
 )
 
-target_link_libraries(sockobjserver PRIVATE
-        nlohmann_json::nlohmann_json
+add_library(sockobjlib STATIC
+        ${SOCKOBJ_LIB_SRC}
 )
 
-target_include_directories(sockobjserver PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
+target_include_directories(sockobjlib PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/client
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/server
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/core
         ${httplib_SOURCE_DIR}
 )
 
+target_link_libraries(sockobjlib PUBLIC
+        nlohmann_json::nlohmann_json
+)
+
 if(WIN32)
-    target_compile_definitions(sockobjserver PRIVATE
+    target_compile_definitions(sockobjlib PRIVATE
             _WIN32_WINNT=0x0A00
             NOMINMAX
     )
-    target_link_libraries(sockobjserver PRIVATE ws2_32)
+    target_link_libraries(sockobjlib PRIVATE ws2_32)
 endif()
 
 if(UNIX)
-    target_link_libraries(sockobjserver PRIVATE pthread)
+    target_link_libraries(sockobjlib PRIVATE pthread)
 endif()
+
+# Приложение
+add_executable(sockobjserver
+        app/main.cpp
+        app/models/proxy.h
+        app/models/simple_test.h
+)
+
+target_include_directories(sockobjserver PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/app
+)
+
+target_link_libraries(sockobjserver PRIVATE
+        sockobjlib
+)

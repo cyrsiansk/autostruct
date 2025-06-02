@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <functional>
-#include <nlohmann/json.hpp>
+#include <../../cmake-build-debug/_deps/json-src/include/nlohmann/json.hpp>
 #include "utils.h"
 
 class IRouteHandler {

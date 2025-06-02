@@ -33,7 +33,5 @@ public:
                 res.status = 400;
             }
         });
-
-        entries.push_back({compiled, handler});
     }
 };
