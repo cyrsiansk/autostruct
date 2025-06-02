@@ -18,7 +18,7 @@ int main() {
 
     std::thread server_thread([&server_running] {
         try {
-            SockerAutoStructServer server;
+            SocketAutoStructServer server;
 
             server.add_handler<int, SimpleTest>(
                 "/base/<int>/send",
@@ -38,7 +38,7 @@ int main() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     if (server_running) {
-        SockerAutoStructClient client("localhost", 5000);
+        SocketAutoStructClient client("localhost", 5000);
         int counter = 0;
 
         while (counter < 5) {

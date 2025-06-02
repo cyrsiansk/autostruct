@@ -3,13 +3,13 @@
 #include <httplib.h>
 #include <string>
 
-class SockerAutoStructClient {
+class SocketAutoStructClient {
     std::string host;
     int port;
     httplib::Client cli;
 
 public:
-    SockerAutoStructClient(const std::string& host, int port);
+    SocketAutoStructClient(const std::string& host, int port);
 
     template <typename TParam, typename TData>
     bool post(const std::string& route, const TParam& param, const TData& data);

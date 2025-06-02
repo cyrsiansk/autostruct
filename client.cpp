@@ -1,12 +1,12 @@
 #include "client.h"
 
-SockerAutoStructClient::SockerAutoStructClient(const std::string& host, int port)
+SocketAutoStructClient::SocketAutoStructClient(const std::string& host, int port)
     : host(host), port(port), cli(host, port) {
     cli.set_connection_timeout(5);
 }
 
 template <typename TParam, typename TData>
-bool SockerAutoStructClient::post(const std::string& route, const TParam& param, const TData& data) {
+bool SocketAutoStructClient::post(const std::string& route, const TParam& param, const TData& data) {
     std::string path = std::regex_replace(route, std::regex("<\\w+>"), std::to_string(param));
     try {
         nlohmann::json j = data;
@@ -18,4 +18,4 @@ bool SockerAutoStructClient::post(const std::string& route, const TParam& param,
 }
 
 
-template bool SockerAutoStructClient::post<int, SimpleTest>(const std::string&, const int&, const SimpleTest&);
+template bool SocketAutoStructClient::post<int, SimpleTest>(const std::string&, const int&, const SimpleTest&);

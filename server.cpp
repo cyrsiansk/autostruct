@@ -1,6 +1,6 @@
 #include "server.h"
 
-void SockerAutoStructServer::start(const std::string& host, int port) {
+void SocketAutoStructServer::start(const std::string& host, int port) {
     registry.register_all(router);
 
     std::cout << "🚀 Server starting at " << host << ":" << port << std::endl;
@@ -10,6 +10,6 @@ void SockerAutoStructServer::start(const std::string& host, int port) {
     svr.listen_after_bind();
 }
 
-void SockerAutoStructServer::stop() {
+void SocketAutoStructServer::stop() {
     svr.stop();
 }
