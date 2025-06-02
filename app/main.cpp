@@ -21,6 +21,8 @@ std::mutex cout_mutex;
 #define COLOR_HEADER  "\033[1;34m"
 #define COLOR_FIELD   "\033[0;32m"
 #define COLOR_VALUE   "\033[0;37m"
+#define COLOR_ERROR   "\033[0;31m"
+#define COLOR_WARNING "\033[0;33m"
 
 #define LOG_BLOCK(tag) COLOR_HEADER "[" tag "]" COLOR_RESET
 #define LOG_PAIR(field, value) COLOR_FIELD << field << "=" << COLOR_VALUE << value
@@ -58,15 +60,15 @@ int main() {
 #endif
 
     std::atomic server_running{true};
-    const int MAX_CLIENTS = 50;
-    const int REQUESTS_PER_CLIENT = 200;
+    const int MAX_CLIENTS = 100;
+    const int REQUESTS_PER_CLIENT = 1000;
 
     std::thread server_thread([&server_running] {
         try {
             SocketAutoStructServer server;
 
             server.add_handler<int, SimpleTest>("/base/<int>/send", [](int type, const SimpleTest& data) {
-            std::lock_guard lock(cout_mutex);
+            std::lock_guard<std::mutex> lock(cout_mutex);
             std::cout << LOG_BLOCK("SimpleTest") << " "
                       << LOG_PAIR("type", type) << " | "
                       << LOG_PAIR("retries", data.retries) << " | "
@@ -74,67 +76,109 @@ int main() {
             });
 
             server.add_handler<int, UserInfo>("/user/create", [](int id, const UserInfo& user) {
-                std::lock_guard lock(cout_mutex);
+                std::lock_guard<std::mutex> lock(cout_mutex);
                 std::cout << LOG_BLOCK("UserCreate") << " "
                           << LOG_PAIR("id", id) << " | "
                           << LOG_PAIR("name", user.name) << " | "
                           << LOG_PAIR("email", user.email) << " | "
                           << LOG_PAIR("age", user.age) << std::endl;
+
+                if (user.name.empty() || user.email.empty()) {
+                    std::cout << COLOR_ERROR << "[Error] Missing required user fields" << COLOR_RESET << std::endl;
+                }
             });
 
             server.add_handler<std::string, LogEntry>("/logs/<string>/add", [](const std::string& level, const LogEntry& log) {
-                std::lock_guard lock(cout_mutex);
+                std::lock_guard<std::mutex> lock(cout_mutex);
                 std::cout << LOG_BLOCK("Log") << " "
                           << LOG_PAIR("level", level) << " | "
                           << LOG_PAIR("timestamp", log.timestamp) << " | "
                           << LOG_PAIR("message", log.message) << std::endl;
+
+                if (log.message.find("deprecated") != std::string::npos) {
+                    std::cout << COLOR_WARNING << "[Warning] Log message contains deprecated keyword" << COLOR_RESET << std::endl;
+                }
             });
 
             server.add_handler<int, Product>("/api/v1/products/<int>/add", [](int flag, const Product& product) {
-                std::lock_guard lock(cout_mutex);
+                std::lock_guard<std::mutex> lock(cout_mutex);
                 std::cout << LOG_BLOCK("ProductAdd") << " "
                           << LOG_PAIR("flag", flag) << " | "
                           << LOG_PAIR("name", product.name) << " | "
                           << LOG_PAIR("price", "$" + std::to_string(product.price)) << " | "
                           << LOG_PAIR("stock", product.stock) << " | "
                           << LOG_PAIR("category", product.category) << std::endl;
+
+                if (product.stock <= 0) {
+                    std::cout << COLOR_WARNING << "[Warning] Product has no stock" << COLOR_RESET << std::endl;
+                }
             });
 
             server.add_handler<std::string, Transaction>("/api/v1/transactions/<string>/process", [](const std::string& token, const Transaction& tx) {
-                std::lock_guard lock(cout_mutex);
+                std::lock_guard<std::mutex> lock(cout_mutex);
                 std::cout << LOG_BLOCK("Transaction") << " "
                           << LOG_PAIR("token", token) << " | "
                           << LOG_PAIR("amount", "$" + std::to_string(tx.amount)) << " | "
                           << LOG_PAIR("currency", tx.currency) << " | "
                           << LOG_PAIR("status", tx.status) << std::endl;
+
+                if (tx.amount <= 0) {
+                    std::cout << COLOR_ERROR << "[Error] Invalid transaction amount" << COLOR_RESET << std::endl;
+                }
             });
 
             server.add_handler<int, AnalyticsEvent>("/api/v1/analytics/<int>/collect", [](int version, const AnalyticsEvent& event) {
-                std::lock_guard lock(cout_mutex);
+                std::lock_guard<std::mutex> lock(cout_mutex);
                 std::cout << LOG_BLOCK("Analytics") << " "
                           << LOG_PAIR("version", version) << " | "
                           << LOG_PAIR("event", event.event_name) << " | "
                           << LOG_PAIR("device_id", event.device_id) << " | "
                           << LOG_PAIR("payload", event.payload) << std::endl;
+
+                if (event.payload.empty()) {
+                    std::cout << COLOR_WARNING << "[Warning] Analytics payload is empty" << COLOR_RESET << std::endl;
+                }
             });
 
             server.add_handler<std::string, DeviceInfo>("/api/v1/devices/<string>/status", [](const std::string& device_id, const DeviceInfo& info) {
-                std::lock_guard lock(cout_mutex);
+                std::lock_guard<std::mutex> lock(cout_mutex);
                 std::cout << LOG_BLOCK("DeviceStatus") << " "
                           << LOG_PAIR("id", device_id) << " | "
                           << LOG_PAIR("firmware", info.firmware_version) << " | "
                           << LOG_PAIR("status", info.status) << " | "
                           << LOG_PAIR("battery", info.battery_level) << "%" << std::endl;
+
+                if (info.battery_level < 10) {
+                    std::cout << COLOR_WARNING << "[Warning] Low battery level: " << info.battery_level << "%" << COLOR_RESET << std::endl;
+                }
+                if (info.battery_level < 5) {
+                    std::cout << COLOR_ERROR << "[Error] Critical battery level: " << info.battery_level << "%" << COLOR_RESET << std::endl;
+                }
             });
 
             server.add_handler<int, WeatherData>("/api/v1/weather/<int>/update", [](int region_code, const WeatherData& data) {
-                std::lock_guard lock(cout_mutex);
+                std::lock_guard<std::mutex> lock(cout_mutex);
                 std::cout << LOG_BLOCK("WeatherUpdate") << " "
                           << LOG_PAIR("region", region_code) << " | "
                           << LOG_PAIR("location", data.location) << " | "
                           << LOG_PAIR("temperature", data.temperature) << "°C | "
                           << LOG_PAIR("humidity", data.humidity) << "% | "
                           << LOG_PAIR("pressure", data.pressure) << " hPa" << std::endl;
+
+                if (random_int(0, 50) == 42) {
+                    std::cout << COLOR_ERROR << "[Error] Weather update failed" << COLOR_RESET << std::endl;
+                    return;
+                }
+
+                if (data.temperature > 45) {
+                    std::cout << COLOR_WARNING << "[Warning] Unusually high temperature: " << data.temperature << "°C" << COLOR_RESET << std::endl;
+                }
+                if (data.humidity > 80) {
+                    std::cout << COLOR_WARNING << "[Warning] Unusually high humidity: " << data.humidity << "%" << COLOR_RESET << std::endl;
+                }
+                if (data.pressure > 1013) {
+                    std::cout << COLOR_WARNING << "[Warning] Unusually high pressure: " << data.pressure << " hPa" << COLOR_RESET << std::endl;
+                }
             });
 
             server.start("0.0.0.0", 5000);
@@ -233,7 +277,7 @@ int main() {
                                 break;
                             }
                         }
-                        std::this_thread::sleep_for(std::chrono::milliseconds(random_int(50, 300)));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(random_int(10, 500)));
                     } catch (const std::exception& e) {
                         std::cerr << "Client " << i << " error: " << e.what() << std::endl;
                     }
