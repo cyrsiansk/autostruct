@@ -24,6 +24,7 @@ add_executable(sockobjserver
         router.h
         iroute_handler.h
         endpoint.h
+        endpoint_registry.h
 )
 
 target_link_libraries(sockobjserver PRIVATE
