@@ -13,6 +13,17 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <mutex>
+
+std::mutex cout_mutex;
+
+#define COLOR_RESET   "\033[0m"
+#define COLOR_HEADER  "\033[1;34m"
+#define COLOR_FIELD   "\033[0;32m"
+#define COLOR_VALUE   "\033[0;37m"
+
+#define LOG_BLOCK(tag) COLOR_HEADER "[" tag "]" COLOR_RESET
+#define LOG_PAIR(field, value) COLOR_FIELD << field << "=" << COLOR_VALUE << value
 
 #ifdef _WIN32
 #include <windows.h>
@@ -54,60 +65,80 @@ int main() {
         try {
             SocketAutoStructServer server;
 
-            // Оригинальные эндпоинты
             server.add_handler<int, SimpleTest>("/base/<int>/send", [](int type, const SimpleTest& data) {
-                std::cout << "📧 [SimpleTest] type=" << type
-                          << " retries=" << data.retries
-                          << " proxy=" << data.proxy.url << std::endl;
+            std::lock_guard lock(cout_mutex);
+            std::cout << LOG_BLOCK("SimpleTest") << " "
+                      << LOG_PAIR("type", type) << " | "
+                      << LOG_PAIR("retries", data.retries) << " | "
+                      << LOG_PAIR("proxy", data.proxy.url) << std::endl;
             });
 
-            server.add_handler<int, UserInfo>("/user/create", [](int useless_id, const UserInfo& user) {
-                std::cout << "👤 [User] (useless_id=" << useless_id << ") name=" << user.name
-                          << ", email=" << user.email
-                          << ", age=" << user.age << std::endl;
+            server.add_handler<int, UserInfo>("/user/create", [](int id, const UserInfo& user) {
+                std::lock_guard lock(cout_mutex);
+                std::cout << LOG_BLOCK("UserCreate") << " "
+                          << LOG_PAIR("id", id) << " | "
+                          << LOG_PAIR("name", user.name) << " | "
+                          << LOG_PAIR("email", user.email) << " | "
+                          << LOG_PAIR("age", user.age) << std::endl;
             });
 
             server.add_handler<std::string, LogEntry>("/logs/<string>/add", [](const std::string& level, const LogEntry& log) {
-                std::cout << "📘 [Log] [" << level << "] "
-                          << log.timestamp << ": " << log.message << std::endl;
+                std::lock_guard lock(cout_mutex);
+                std::cout << LOG_BLOCK("Log") << " "
+                          << LOG_PAIR("level", level) << " | "
+                          << LOG_PAIR("timestamp", log.timestamp) << " | "
+                          << LOG_PAIR("message", log.message) << std::endl;
             });
 
-            // Новые эндпоинты с бесполезными параметрами
-            server.add_handler<int, Product>("/api/v1/products/<int>/add", [](int useless_flag, const Product& product) {
-                std::cout << "🛒 [Product] (flag=" << useless_flag << ") Added: " << product.name
-                          << " ($" << product.price << "), Stock: "
-                          << product.stock << ", Category: "
-                          << product.category << std::endl;
+            server.add_handler<int, Product>("/api/v1/products/<int>/add", [](int flag, const Product& product) {
+                std::lock_guard lock(cout_mutex);
+                std::cout << LOG_BLOCK("ProductAdd") << " "
+                          << LOG_PAIR("flag", flag) << " | "
+                          << LOG_PAIR("name", product.name) << " | "
+                          << LOG_PAIR("price", "$" + std::to_string(product.price)) << " | "
+                          << LOG_PAIR("stock", product.stock) << " | "
+                          << LOG_PAIR("category", product.category) << std::endl;
             });
 
-            server.add_handler<std::string, Transaction>("/api/v1/transactions/<string>/process", [](const std::string& useless_token, const Transaction& tx) {
-                std::cout << "💳 [Transaction] (token=" << useless_token << "), Amount: $" << tx.amount
-                          << ", Currency: " << tx.currency
-                          << ", Status: " << tx.status << std::endl;
+            server.add_handler<std::string, Transaction>("/api/v1/transactions/<string>/process", [](const std::string& token, const Transaction& tx) {
+                std::lock_guard lock(cout_mutex);
+                std::cout << LOG_BLOCK("Transaction") << " "
+                          << LOG_PAIR("token", token) << " | "
+                          << LOG_PAIR("amount", "$" + std::to_string(tx.amount)) << " | "
+                          << LOG_PAIR("currency", tx.currency) << " | "
+                          << LOG_PAIR("status", tx.status) << std::endl;
             });
 
-            server.add_handler<int, AnalyticsEvent>("/api/v1/analytics/<int>/collect", [](int useless_version, const AnalyticsEvent& event) {
-                std::cout << "📊 [Analytics] (v=" << useless_version << ") " << event.event_name
-                          << " from " << event.device_id
-                          << ", payload: " << event.payload << std::endl;
+            server.add_handler<int, AnalyticsEvent>("/api/v1/analytics/<int>/collect", [](int version, const AnalyticsEvent& event) {
+                std::lock_guard lock(cout_mutex);
+                std::cout << LOG_BLOCK("Analytics") << " "
+                          << LOG_PAIR("version", version) << " | "
+                          << LOG_PAIR("event", event.event_name) << " | "
+                          << LOG_PAIR("device_id", event.device_id) << " | "
+                          << LOG_PAIR("payload", event.payload) << std::endl;
             });
 
             server.add_handler<std::string, DeviceInfo>("/api/v1/devices/<string>/status", [](const std::string& device_id, const DeviceInfo& info) {
-                std::cout << "📱 [Device] " << device_id << " (fw=" << info.firmware_version
-                          << ", status=" << info.status
-                          << ", battery=" << info.battery_level << "%)" << std::endl;
+                std::lock_guard lock(cout_mutex);
+                std::cout << LOG_BLOCK("DeviceStatus") << " "
+                          << LOG_PAIR("id", device_id) << " | "
+                          << LOG_PAIR("firmware", info.firmware_version) << " | "
+                          << LOG_PAIR("status", info.status) << " | "
+                          << LOG_PAIR("battery", info.battery_level) << "%" << std::endl;
             });
 
-            server.add_handler<int, WeatherData>("/api/v1/weather/<int>/update", [](int useless_region_code, const WeatherData& data) {
-                std::cout << "☀️ [Weather] (region=" << useless_region_code << ") " << data.location
-                          << ": " << data.temperature << "°C, "
-                          << data.humidity << "% humidity, "
-                          << data.pressure << " hPa" << std::endl;
+            server.add_handler<int, WeatherData>("/api/v1/weather/<int>/update", [](int region_code, const WeatherData& data) {
+                std::lock_guard lock(cout_mutex);
+                std::cout << LOG_BLOCK("WeatherUpdate") << " "
+                          << LOG_PAIR("region", region_code) << " | "
+                          << LOG_PAIR("location", data.location) << " | "
+                          << LOG_PAIR("temperature", data.temperature) << "°C | "
+                          << LOG_PAIR("humidity", data.humidity) << "% | "
+                          << LOG_PAIR("pressure", data.pressure) << " hPa" << std::endl;
             });
-
-            // Убрали health check, так как он был GET
 
             server.start("0.0.0.0", 5000);
+
         } catch (const std::exception& e) {
             std::cerr << "⛔ Server error: " << e.what() << std::endl;
             server_running = false;
@@ -126,14 +157,14 @@ int main() {
                     try {
                         int request_type = random_int(0, 7);
                         switch (request_type) {
-                            case 0: { // Original SimpleTest
+                            case 0: {
                                 Proxy proxy{"socks5", "192.168.0." + std::to_string(random_int(1, 254)) + ":1080",
                                            "user" + random_string(4), "pass" + random_string(6)};
                                 SimpleTest test{random_int(0, 5), proxy};
                                 client.post("/base/<int>/send", random_int(1, 100), test);
                                 break;
                             }
-                            case 1: { // Original UserInfo
+                            case 1: {
                                 UserInfo user{
                                     "User-" + random_string(6),
                                     "user" + std::to_string(i*100 + j) + "@test.com",
@@ -142,7 +173,7 @@ int main() {
                                 client.post("/user/create", random_int(0, 1), user);
                                 break;
                             }
-                            case 2: { // Original LogEntry
+                            case 2: {
                                 LogEntry log{
                                     "2025-06-0" + std::to_string(random_int(1, 9)) + "T" +
                                     std::to_string(random_int(10, 23)) + ":" +
@@ -153,7 +184,7 @@ int main() {
                                 client.post("/logs/<string>/add", random_int(0, 1) ? "info" : "error", log);
                                 break;
                             }
-                            case 3: { // Product
+                            case 3: {
                                 Product p{
                                     "Product-" + random_string(5),
                                     random_double(10, 1000),
@@ -163,7 +194,7 @@ int main() {
                                 client.post("/api/v1/products/<int>/add", random_int(0, 3), p);
                                 break;
                             }
-                            case 4: { // Transaction
+                            case 4: {
                                 Transaction tx{
                                     random_double(1, 500),
                                     random_int(0, 1) ? "USD" : "EUR",
@@ -172,7 +203,7 @@ int main() {
                                 client.post("/api/v1/transactions/<string>/process", random_string(8), tx);
                                 break;
                             }
-                            case 5: { // Analytics
+                            case 5: {
                                 AnalyticsEvent event{
                                     "event-" + random_string(3),
                                     "device-" + random_string(8),
@@ -181,7 +212,7 @@ int main() {
                                 client.post("/api/v1/analytics/<int>/collect", random_int(1, 3), event);
                                 break;
                             }
-                            case 6: { // Device info
+                            case 6: {
                                 std::string fw = std::to_string(random_int(1, 5)) + "." + std::to_string(random_int(0, 9));
                                 DeviceInfo info{
                                     fw,
@@ -191,7 +222,7 @@ int main() {
                                 client.post("/api/v1/devices/<string>/status","dev-" + std::to_string(i), info);
                                 break;
                             }
-                            case 7: { // Weather data
+                            case 7: {
                                 WeatherData weather{
                                     "Location-" + random_string(4),
                                     random_double(-20, 40),
@@ -209,8 +240,6 @@ int main() {
                 }
             });
         }
-
-        // Убрали health check thread, так как он использовал GET
 
         for (auto& t : clients) {
             if (t.joinable()) t.join();
