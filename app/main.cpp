@@ -31,8 +31,20 @@ std::mutex cout_mutex;
 #include <windows.h>
 #endif
 
-// Генераторы случайных данных
-std::string random_string(size_t length) {
+
+void enable_virtual_terminal() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) return;
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode)) return;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
+
+
+std::string random_string(const size_t length) {
     static const std::string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     static std::mt19937 gen(std::random_device{}());
     static std::uniform_int_distribution<> dist(0, chars.size() - 1);
@@ -42,15 +54,15 @@ std::string random_string(size_t length) {
     return result;
 }
 
-double random_double(double min, double max) {
+double random_double(const double min, const double max) {
     static std::mt19937 gen(std::random_device{}());
-    std::uniform_real_distribution<> dist(min, max);
+    std::uniform_real_distribution dist(min, max);
     return dist(gen);
 }
 
-int random_int(int min, int max) {
+int random_int(const int min, const int max) {
     static std::mt19937 gen(std::random_device{}());
-    std::uniform_int_distribution<> dist(min, max);
+    std::uniform_int_distribution dist(min, max);
     return dist(gen);
 }
 
@@ -59,24 +71,25 @@ int main() {
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
+    enable_virtual_terminal();
+
     std::atomic server_running{true};
-    const int MAX_CLIENTS = 100;
-    const int REQUESTS_PER_CLIENT = 1000;
+    constexpr int REQUESTS_PER_CLIENT = 1000;
 
     std::thread server_thread([&server_running] {
         try {
             SocketAutoStructServer server;
 
-            server.add_handler<int, SimpleTest>("/base/<int>/send", [](int type, const SimpleTest& data) {
-            std::lock_guard<std::mutex> lock(cout_mutex);
+            server.add_handler<int, SimpleTest>("/base/<int>/send", [](const int type, const SimpleTest& data) {
+            std::lock_guard lock(cout_mutex);
             std::cout << LOG_BLOCK("SimpleTest") << " "
                       << LOG_PAIR("type", type) << " | "
                       << LOG_PAIR("retries", data.retries) << " | "
                       << LOG_PAIR("proxy", data.proxy.url) << std::endl;
             });
 
-            server.add_handler<int, UserInfo>("/user/create", [](int id, const UserInfo& user) {
-                std::lock_guard<std::mutex> lock(cout_mutex);
+            server.add_handler<int, UserInfo>("/user/create", [](const int id, const UserInfo& user) {
+                std::lock_guard lock(cout_mutex);
                 std::cout << LOG_BLOCK("UserCreate") << " "
                           << LOG_PAIR("id", id) << " | "
                           << LOG_PAIR("name", user.name) << " | "
@@ -89,7 +102,7 @@ int main() {
             });
 
             server.add_handler<std::string, LogEntry>("/logs/<string>/add", [](const std::string& level, const LogEntry& log) {
-                std::lock_guard<std::mutex> lock(cout_mutex);
+                std::lock_guard lock(cout_mutex);
                 std::cout << LOG_BLOCK("Log") << " "
                           << LOG_PAIR("level", level) << " | "
                           << LOG_PAIR("timestamp", log.timestamp) << " | "
@@ -100,8 +113,8 @@ int main() {
                 }
             });
 
-            server.add_handler<int, Product>("/api/v1/products/<int>/add", [](int flag, const Product& product) {
-                std::lock_guard<std::mutex> lock(cout_mutex);
+            server.add_handler<int, Product>("/api/v1/products/<int>/add", [](const int flag, const Product& product) {
+                std::lock_guard lock(cout_mutex);
                 std::cout << LOG_BLOCK("ProductAdd") << " "
                           << LOG_PAIR("flag", flag) << " | "
                           << LOG_PAIR("name", product.name) << " | "
@@ -115,7 +128,7 @@ int main() {
             });
 
             server.add_handler<std::string, Transaction>("/api/v1/transactions/<string>/process", [](const std::string& token, const Transaction& tx) {
-                std::lock_guard<std::mutex> lock(cout_mutex);
+                std::lock_guard lock(cout_mutex);
                 std::cout << LOG_BLOCK("Transaction") << " "
                           << LOG_PAIR("token", token) << " | "
                           << LOG_PAIR("amount", "$" + std::to_string(tx.amount)) << " | "
@@ -127,8 +140,8 @@ int main() {
                 }
             });
 
-            server.add_handler<int, AnalyticsEvent>("/api/v1/analytics/<int>/collect", [](int version, const AnalyticsEvent& event) {
-                std::lock_guard<std::mutex> lock(cout_mutex);
+            server.add_handler<int, AnalyticsEvent>("/api/v1/analytics/<int>/collect", [](const int version, const AnalyticsEvent& event) {
+                std::lock_guard lock(cout_mutex);
                 std::cout << LOG_BLOCK("Analytics") << " "
                           << LOG_PAIR("version", version) << " | "
                           << LOG_PAIR("event", event.event_name) << " | "
@@ -141,7 +154,7 @@ int main() {
             });
 
             server.add_handler<std::string, DeviceInfo>("/api/v1/devices/<string>/status", [](const std::string& device_id, const DeviceInfo& info) {
-                std::lock_guard<std::mutex> lock(cout_mutex);
+                std::lock_guard lock(cout_mutex);
                 std::cout << LOG_BLOCK("DeviceStatus") << " "
                           << LOG_PAIR("id", device_id) << " | "
                           << LOG_PAIR("firmware", info.firmware_version) << " | "
@@ -156,8 +169,8 @@ int main() {
                 }
             });
 
-            server.add_handler<int, WeatherData>("/api/v1/weather/<int>/update", [](int region_code, const WeatherData& data) {
-                std::lock_guard<std::mutex> lock(cout_mutex);
+            server.add_handler<int, WeatherData>("/api/v1/weather/<int>/update", [](const int region_code, const WeatherData& data) {
+                std::lock_guard lock(cout_mutex);
                 std::cout << LOG_BLOCK("WeatherUpdate") << " "
                           << LOG_PAIR("region", region_code) << " | "
                           << LOG_PAIR("location", data.location) << " | "
@@ -192,6 +205,7 @@ int main() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     if (server_running) {
+        constexpr int MAX_CLIENTS = 100;
         std::vector<std::thread> clients;
 
         for (int i = 0; i < MAX_CLIENTS; ++i) {
@@ -199,8 +213,7 @@ int main() {
                 SocketAutoStructClient client("127.0.0.1", 5000);
                 for (int j = 0; j < REQUESTS_PER_CLIENT; ++j) {
                     try {
-                        int request_type = random_int(0, 7);
-                        switch (request_type) {
+                        switch (random_int(0, 7)) {
                             case 0: {
                                 Proxy proxy{"socks5", "192.168.0." + std::to_string(random_int(1, 254)) + ":1080",
                                            "user" + random_string(4), "pass" + random_string(6)};
@@ -276,6 +289,7 @@ int main() {
                                 client.post("/api/v1/weather/<int>/update", random_int(1, 10), weather);
                                 break;
                             }
+                            default: ;
                         }
                         std::this_thread::sleep_for(std::chrono::milliseconds(random_int(10, 500)));
                     } catch (const std::exception& e) {
